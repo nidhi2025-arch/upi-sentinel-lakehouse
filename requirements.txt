@@ -4,3 +4,4 @@ faker>=25.0.0
 pytest>=8.0.0
 pandas>=2.0.0
 streamlit>=1.36.0
+graphviz>=0.20.0
