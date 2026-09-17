@@ -171,6 +171,12 @@ The repository includes a Streamlit application for local browser exploration. I
 
 The local app is a pandas demonstration of the Spark fraud rules. It is intended for browser review and portfolio demonstrations; the notebooks remain the Databricks-compatible execution path for Bronze, Silver, SCD Type 2, fraud scoring, and Gold Delta tables.
 
+### One-Click Startup
+
+For a quick local review, double-click `START_UPI_SENTINEL.bat` from Windows Explorer. It creates the local virtual environment when needed, installs only the dashboard dependencies, selects a free port, opens the laptop browser, and prints a same-Wi-Fi mobile URL. The laptop and mobile device must be on the same network, and Windows Firewall may need to allow Python for mobile access.
+
+The launcher does not use email authentication. A local browser URL is controlled by the laptop and network; an email address alone cannot deploy or expose a localhost application.
+
 ## Databricks Notes
 
 - The notebooks are written in script form so they can be copied into Databricks notebooks or run as `.py` files in a Spark environment.
