@@ -12,7 +12,7 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
 }
 
 $venvPython = Join-Path $projectRoot ".venv\Scripts\python.exe"
-& $venvPython -m pip install --disable-pip-version-check --quiet streamlit pandas graphviz
+& $venvPython -m pip install --disable-pip-version-check --quiet -r requirements.txt
 
 $port = 8501
 while (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue) {

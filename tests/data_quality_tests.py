@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import csv
 import importlib.util
+import os
+import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -19,6 +22,7 @@ def load_module(name: str, relative_path: str):
     spec = importlib.util.spec_from_file_location(name, module_path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
     spec.loader.exec_module(module)  # type: ignore[union-attr]
     return module
 
@@ -30,6 +34,8 @@ generator_module = load_module("upi_generator", "data_generator/generate_upi_tra
 
 @pytest.fixture(scope="session")
 def spark():
+    if shutil.which("java") is None and not os.environ.get("JAVA_HOME"):
+        pytest.skip("Java is required for Spark tests; run these tests in Databricks or a Java-enabled environment.")
     session = (
         SparkSession.builder.master("local[2]")
         .appName("upi-sentinel-tests")

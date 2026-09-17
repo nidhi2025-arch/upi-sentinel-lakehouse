@@ -2,7 +2,6 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-.streamlit/
 .mypy_cache/
 .ruff_cache/
 .venv/

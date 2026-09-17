@@ -16,7 +16,7 @@ import ipaddress
 import random
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Sequence, Tuple
 
@@ -115,7 +115,7 @@ def build_customer_profiles(n_customers: int) -> List[CustomerProfile]:
         bank = random.choice(BANKS)
         city = random.choice(INDIAN_CITIES)
         device_id = f"dev-{uuid.uuid4().hex[:12]}"
-        effective_date = (datetime.utcnow() - timedelta(days=random.randint(0, 365))).date().isoformat()
+        effective_date = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=random.randint(0, 365))).date().isoformat()
         kyc_status = random.choices(["FULL_KYC", "MIN_KYC", "PENDING"], weights=[0.7, 0.2, 0.1])[0]
         user_id = f"USR{idx:08d}"
         profiles.append(
@@ -165,7 +165,7 @@ def tx_record(
 
 
 def generate_velocity_cluster(profile: CustomerProfile) -> List[Dict[str, str]]:
-    base_ts = datetime.utcnow() - timedelta(days=random.randint(1, 20), hours=random.randint(0, 20))
+    base_ts = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=random.randint(1, 20), hours=random.randint(0, 20))
     city = profile.location_city
     device_id = profile.device_id
     receiver = make_vpa(fake.name(), random.choice(BANKS))
@@ -187,7 +187,7 @@ def generate_velocity_cluster(profile: CustomerProfile) -> List[Dict[str, str]]:
 
 
 def generate_geo_anomaly(profile: CustomerProfile) -> List[Dict[str, str]]:
-    base_ts = datetime.utcnow() - timedelta(days=random.randint(1, 20), hours=random.randint(0, 20))
+    base_ts = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=random.randint(1, 20), hours=random.randint(0, 20))
     city_a, city_b = random.sample(INDIAN_CITIES, 2)
     receiver = make_vpa(fake.name(), random.choice(BANKS))
     return [
@@ -218,7 +218,7 @@ def generate_mule_cluster(profiles: Sequence[CustomerProfile]) -> List[Dict[str,
     if len(profiles) < 3:
         raise ValueError("Need at least 3 customer profiles for mule cluster generation")
 
-    base_ts = datetime.utcnow() - timedelta(days=random.randint(1, 20), hours=random.randint(0, 20))
+    base_ts = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=random.randint(1, 20), hours=random.randint(0, 20))
     shared_device = f"dev-{uuid.uuid4().hex[:12]}"
     receiver = make_vpa(fake.name(), random.choice(BANKS))
     rows: List[Dict[str, str]] = []
@@ -239,7 +239,7 @@ def generate_mule_cluster(profiles: Sequence[CustomerProfile]) -> List[Dict[str,
 
 
 def generate_bruteforce_cluster(profile: CustomerProfile) -> List[Dict[str, str]]:
-    base_ts = datetime.utcnow() - timedelta(days=random.randint(1, 20), hours=random.randint(0, 20))
+    base_ts = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=random.randint(1, 20), hours=random.randint(0, 20))
     receiver = make_vpa(fake.name(), random.choice(BANKS))
     rows: List[Dict[str, str]] = []
     for i in range(5):
@@ -272,7 +272,7 @@ def generate_bruteforce_cluster(profile: CustomerProfile) -> List[Dict[str, str]
 
 
 def generate_normal_transaction(profile: CustomerProfile) -> Dict[str, str]:
-    txn_dt = datetime.utcnow() - timedelta(
+    txn_dt = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
         days=random.randint(0, 30),
         hours=random.randint(0, 23),
         minutes=random.randint(0, 59),
@@ -421,4 +421,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
