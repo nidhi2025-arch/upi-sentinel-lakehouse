@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.streamlit/
 .mypy_cache/
 .ruff_cache/
 .venv/
@@ -21,4 +22,3 @@ sample_data/customer_dim.csv
 Thumbs.db
 .vscode/
 .idea/
-

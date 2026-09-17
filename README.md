@@ -32,6 +32,8 @@ flowchart LR
   D --> F[Gold Analytics]
   E --> F
   F --> G[Databricks SQL Dashboard]
+  A --> H[Local Streamlit Browser Demo]
+  E --> H
 ```
 
 Text view:
@@ -62,6 +64,7 @@ Databricks SQL Dashboard
 
 ```text
 upi-sentinel-lakehouse/
+|-- app.py                         # Local Streamlit browser demo
 ├── README.md
 ├── LICENSE
 ├── requirements.txt
@@ -95,6 +98,7 @@ upi-sentinel-lakehouse/
 | Ingestion | Incremental file streaming, Auto Loader style `cloudFiles` fallback |
 | Quality | PyDeequ-style custom checks without external libraries |
 | Analytics | Fraud rules, mule detection, merchant KPIs |
+| Local demo UI | Streamlit, pandas |
 | Runtime | Databricks Community Edition compatible |
 
 ## Pipeline Order
@@ -142,6 +146,30 @@ Run the project in this exact order:
    ```bash
    pytest -q
    ```
+
+## Run the Local Browser Demo
+
+The repository includes a Streamlit application for local browser exploration. It reads the checked-in 10,000-row Synthetic Data sample and provides dashboard views for transaction volume, fraud rules, data quality, high-risk users, and filtered transactions.
+
+1. Create and activate a virtual environment.
+   ```bash
+   python -m venv .venv
+   # Windows PowerShell
+   .\\.venv\\Scripts\\Activate.ps1
+   # macOS/Linux
+   source .venv/bin/activate
+   ```
+2. Install the local demo dependencies.
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+3. Start the browser application.
+   ```bash
+   python -m streamlit run app.py
+   ```
+4. Open the URL printed by Streamlit, normally `http://localhost:8501`.
+
+The local app is a pandas demonstration of the Spark fraud rules. It is intended for browser review and portfolio demonstrations; the notebooks remain the Databricks-compatible execution path for Bronze, Silver, SCD Type 2, fraud scoring, and Gold Delta tables.
 
 ## Databricks Notes
 

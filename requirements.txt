@@ -2,4 +2,5 @@ pyspark>=3.5.0
 delta-spark>=3.2.0
 faker>=25.0.0
 pytest>=8.0.0
-
+pandas>=2.0.0
+streamlit>=1.36.0
