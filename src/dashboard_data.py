@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
+import io
+import json
 from pathlib import Path
 from typing import Iterable
 
@@ -42,10 +44,21 @@ RULE_LABELS = {
 
 ALIASES = {
     "txn_id": "transaction_id",
+    "transactionid": "transaction_id",
+    "transaction": "transaction_id",
     "upi_id": "user_id",
+    "customer_id": "user_id",
+    "customer": "user_id",
     "payer_city": "location_city",
+    "payer_location": "location_city",
     "city": "location_city",
     "device": "device_id",
+    "deviceid": "device_id",
+    "transaction_amount": "amount",
+    "txn_amount": "amount",
+    "date": "timestamp",
+    "event_time": "timestamp",
+    "merchant": "merchant_category",
 }
 
 
@@ -134,6 +147,24 @@ def _read_frame(path: Path) -> pd.DataFrame | None:
     return None
 
 
+def read_uploaded_frame(payload: bytes, filename: str) -> pd.DataFrame:
+    """Read a supported upload without touching the host filesystem."""
+    suffix = Path(filename).suffix.lower()
+    stream = io.BytesIO(payload)
+    if suffix == ".csv":
+        return pd.read_csv(stream)
+    if suffix in {".xlsx", ".xls"}:
+        return pd.read_excel(stream)
+    if suffix in {".parquet", ".pq"}:
+        return pd.read_parquet(stream)
+    if suffix == ".json":
+        parsed = json.loads(payload.decode("utf-8"))
+        if isinstance(parsed, dict):
+            parsed = parsed.get("data", parsed.get("transactions", parsed))
+        return pd.DataFrame(parsed)
+    raise ValueError("Supported file types are CSV, XLSX, JSON, and Parquet.")
+
+
 def _find_source(root: Path) -> tuple[pd.DataFrame | None, str, str]:
     candidates = [
         root / "sample_data" / "upi_transactions.csv",
@@ -190,6 +221,13 @@ def standardize_columns(frame: pd.DataFrame) -> pd.DataFrame:
     data["device_change_flag"] = device_change.fillna(False).astype(bool)
     data["data_origin"] = origin.fillna("Synthetic Data")
     return data
+
+
+def missing_required_columns(frame: pd.DataFrame) -> list[str]:
+    """Return required canonical fields absent before dashboard defaults are added."""
+    names = {str(column).strip().lower() for column in frame.columns}
+    canonical = {ALIASES.get(name, name) for name in names}
+    return [column for column in REQUIRED_COLUMNS if column not in canonical]
 
 
 def quality_checks(data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -340,10 +378,13 @@ def apply_local_demo_overlay(data: pd.DataFrame, missing_rules: Iterable[str]) -
     return enriched
 
 
-def build_dashboard_bundle(root: Path) -> DashboardBundle:
-    source, source_label, source_note = _find_source(root)
-    if source is None:
-        source = generate_deterministic_source()
+def _build_bundle_from_source(
+    root: Path,
+    source: pd.DataFrame,
+    source_label: str,
+    source_note: str,
+    use_optional_gold: bool = True,
+) -> DashboardBundle:
     bronze = standardize_columns(source)
     valid, quarantine, _ = quality_checks(bronze)
     silver = valid.drop_duplicates("transaction_id", keep="first").copy()
@@ -355,8 +396,8 @@ def build_dashboard_bundle(root: Path) -> DashboardBundle:
         scored = apply_fraud_rules(silver)
         overlay_used = True
 
-    optional_gold = _find_optional_output(root, "fraud_transactions")
-    delta_detected = (root / "delta").exists()
+    optional_gold = _find_optional_output(root, "fraud_transactions") if use_optional_gold else None
+    delta_detected = (root / "delta").exists() if use_optional_gold else False
     if optional_gold is not None:
         candidate = standardize_columns(optional_gold)
         if "is_fraud" in candidate.columns:
@@ -384,6 +425,25 @@ def build_dashboard_bundle(root: Path) -> DashboardBundle:
         delta_outputs_detected=delta_detected,
         customer_scd2_available=scd2_available,
     )
+
+
+def build_dashboard_bundle_from_frame(
+    root: Path,
+    source: pd.DataFrame,
+    source_label: str = "Uploaded Synthetic Data",
+    source_note: str = "Loaded from the current browser session.",
+) -> DashboardBundle:
+    """Build dashboard layers from an uploaded or programmatically supplied frame."""
+    if source.empty:
+        raise ValueError("The uploaded file contains no rows.")
+    return _build_bundle_from_source(root, source, source_label, source_note, use_optional_gold=False)
+
+
+def build_dashboard_bundle(root: Path) -> DashboardBundle:
+    source, source_label, source_note = _find_source(root)
+    if source is None:
+        source = generate_deterministic_source()
+    return _build_bundle_from_source(root, source, source_label, source_note)
 
 
 def quality_summary(data: pd.DataFrame) -> pd.DataFrame:

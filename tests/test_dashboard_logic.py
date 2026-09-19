@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -12,7 +13,9 @@ from src.dashboard_data import (
     build_dashboard_bundle,
     csv_bytes,
     generate_deterministic_source,
+    missing_required_columns,
     quality_checks,
+    read_uploaded_frame,
     standardize_columns,
 )
 
@@ -71,3 +74,22 @@ def test_csv_download_payload_contains_filtered_schema() -> None:
     payload = csv_bytes(fraud, ["transaction_id", "risk_score"])
     assert payload.startswith(b"transaction_id,risk_score")
     assert payload.count(b"\n") == len(fraud) + 1
+
+
+def test_upload_readers_and_schema_warning() -> None:
+    source = generate_deterministic_source(8)
+    csv_payload = source.to_csv(index=False).encode("utf-8")
+    json_payload = json.dumps(source.to_dict(orient="records"), default=str).encode("utf-8")
+    assert len(read_uploaded_frame(csv_payload, "transactions.csv")) == 8
+    assert len(read_uploaded_frame(json_payload, "transactions.json")) == 8
+    assert "transaction_id" not in missing_required_columns(source)
+    assert "amount" in missing_required_columns(source.drop(columns=["amount"]))
+
+
+def test_unsupported_upload_type_is_clear() -> None:
+    try:
+        read_uploaded_frame(b"hello", "transactions.txt")
+    except ValueError as exc:
+        assert "CSV" in str(exc)
+    else:
+        raise AssertionError("Unsupported upload type should raise ValueError")

@@ -44,6 +44,8 @@ The root `app.py` has exactly four sections:
 
 The dashboard uses compatible local Gold/Silver CSV or Parquet output when available. Otherwise it loads the checked-in `sample_data/upi_transactions_sample.csv`, and if that is unavailable it creates a deterministic Synthetic Data fallback. Any local rule overlay is labelled in the UI.
 
+The sidebar also accepts CSV, XLSX, JSON, and Parquet uploads. Files are read in memory for the current browser session, normalized to the project schema, and analyzed with the same four local pandas fraud-rule equivalents. Upload only Synthetic Data or other non-sensitive demo data; the dashboard is not a banking-data upload service.
+
 ## Folder Structure
 
 ```text
@@ -80,7 +82,7 @@ upi-sentinel-lakehouse/
 
 | Area | Technology |
 |---|---|
-| Local dashboard | Streamlit, pandas, Graphviz |
+| Local dashboard | Streamlit, pandas, Graphviz, OpenPyXL, PyArrow |
 | Data generation | Python, Faker |
 | Processing | PySpark |
 | Storage | Delta Lake |

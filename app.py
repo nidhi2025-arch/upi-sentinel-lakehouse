@@ -16,8 +16,11 @@ from src.dashboard_data import (
     DashboardBundle,
     RULE_LABELS,
     build_dashboard_bundle,
+    build_dashboard_bundle_from_frame,
     csv_bytes,
     high_risk_users,
+    missing_required_columns,
+    read_uploaded_frame,
     quality_summary,
 )
 
@@ -77,6 +80,17 @@ def inject_styles() -> None:
 @st.cache_data(show_spinner=False)
 def load_bundle() -> DashboardBundle:
     return build_dashboard_bundle(ROOT)
+
+
+@st.cache_data(show_spinner=False)
+def load_uploaded_bundle(payload: bytes, filename: str) -> DashboardBundle:
+    frame = read_uploaded_frame(payload, filename)
+    return build_dashboard_bundle_from_frame(
+        ROOT,
+        frame,
+        source_label=f"Uploaded {filename} (Synthetic Data analysis)",
+        source_note="The uploaded file is analyzed in this browser session and is not stored by the dashboard.",
+    )
 
 
 def inr(value: float) -> str:
@@ -390,13 +404,37 @@ def main() -> None:
         st.rerun()
     st.sidebar.markdown("### UPI Sentinel Lakehouse")
     st.sidebar.caption("Professional Synthetic Data risk-monitoring demo")
+    uploaded_file = st.sidebar.file_uploader(
+        "Upload transaction data",
+        type=["csv", "xlsx", "json", "parquet"],
+        help="Supported formats: CSV, XLSX, JSON, and Parquet. Uploaded data should be Synthetic Data or a non-sensitive demo export.",
+    )
+    if uploaded_file is not None:
+        st.sidebar.caption(f"Loaded in memory: {uploaded_file.name}")
     st.sidebar.markdown("**Dashboard source**")
-    st.sidebar.info("Local pandas demonstration with optional compatible CSV/Parquet output loading. Spark/Delta notebooks remain separate.")
-    try:
-        bundle = load_bundle()
-    except Exception:
-        st.error("The dashboard could not load its data source. Check the repository sample CSV and Python dependencies.")
-        st.stop()
+    st.sidebar.info("Lightweight pandas demonstration with optional Spark/Delta outputs. The complete PySpark pipeline remains in the notebooks.")
+    if uploaded_file is not None:
+        try:
+            uploaded_payload = uploaded_file.getvalue()
+            uploaded_frame = read_uploaded_frame(uploaded_payload, uploaded_file.name)
+            missing = missing_required_columns(uploaded_frame)
+            if missing:
+                st.sidebar.warning("Missing columns: " + ", ".join(missing) + ". Those rows will be quarantined until the fields are provided.")
+            bundle = load_uploaded_bundle(uploaded_payload, uploaded_file.name)
+        except (ValueError, TypeError, UnicodeDecodeError, OSError) as exc:
+            st.sidebar.error(f"Could not analyze this file: {exc}")
+            st.info("The dashboard is showing its built-in deterministic Synthetic Data sample instead.")
+            bundle = load_bundle()
+        except Exception:
+            st.sidebar.error("Could not analyze this file. Check its format and required columns.")
+            st.info("The dashboard is showing its built-in deterministic Synthetic Data sample instead.")
+            bundle = load_bundle()
+    else:
+        try:
+            bundle = load_bundle()
+        except Exception:
+            st.error("The dashboard could not load its built-in Synthetic Data sample. Please refresh the app.")
+            st.stop()
 
     sections = st.tabs([
         "1. EXECUTIVE OVERVIEW",
